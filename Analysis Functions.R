@@ -51,7 +51,7 @@ longstring <- function(df, columns = NULL, value = NULL) {
       if(value %in% df[i,]) {
         
         #If a specific value is specified and the response set includes that value, the output is the maximum longstring of that value
-        max <- max(rle$lengths[rle$values == value])
+        max <- max(rle$lengths[rle$values == value], na.rm = T)
         
       } else {
         
