@@ -153,6 +153,8 @@ zScore <- function(df, columns = NULL) {
 #only works with complete cases
 mahalanobisDist <- function(df, columns = NULL) {
   
+  require(stats)
+  
   if(!is.null(columns)) df <- df[, columns]
   
   #This procedure requires copmplete cases. Therefore we'll limit the dataset to complete cases, and return a vector which is NA when a case is not complete
