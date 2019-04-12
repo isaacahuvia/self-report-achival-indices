@@ -1,149 +1,207 @@
-##############################
-##  Child PRO Data Quality  ##
-##    Analysis Functions    ##
-##############################
+####################################
+##  Self Report Archival Indices  ##
+##       Analysis Functions       ##
+####################################
 
-## Establish sample df to test out functions on 
-df <- data.frame(
-  caseID = seq(1, 100),
-  q1 = round(runif(100) * 4 + 1),
-  q2 = round(runif(100) * 4 + 1),
-  q3 = round(runif(100) * 4 + 1),
-  q4 = round(runif(100) * 4 + 1),
-  q5 = round(runif(100) * 4 + 1)
-) %>%
-  dplyr::mutate(
-    q6 = round(q1 + rnorm(100, 0, 1)),
-    q7 = round(q2 + rnorm(100, 0, 1))
-  ) %>%
-  rbind(
-    c(101, NA,NA,4,2,NA,2),
-    c(102, 1,1,1,1,1,2)
-  )
-
-df$q6 <- sapply(df$q6, min, 5)
-df$q6 <- sapply(df$q6, max, 1)
-df$q7 <- sapply(df$q7, min, 5)
-df$q7 <- sapply(df$q7, max, 1)
-
-df.complete <- df[complete.cases(df),]
-  
 
 
 ####  Omitted Items  ####
-omittedItems <- function(x) {
-  n <- sum(is.na(x))
-  return(n)
-}
+omittedItems <- function(df, columns = NULL) {
+  
+  if(!is.null(columns)) df <- df[, columns]
+  
+  out <- c()
+  
+  for(i in 1:nrow(df)) {
+    
+    out[i] <- sum(is.na(df[i,]))
+    
+  }
+  
+  return(out)
 
-df$omittedItems <- NA_real_
-for(i in 1:nrow(df)) {
-  df$omittedItems[i] <- omittedItems(df[i,2:7])
 }
 
 
 
 ####  Longstring  ####
 #Can calculate overall longstring, or for each response level
-longstring <- function(x, value = NULL) {
-  rle <- rle(x)
+longstring <- function(df, columns = NULL, value = NULL) {
   
-  if(is.null(value)) {
-    max <- max(rle$lengths)
-  } else {
-    if(value %in% x) {
-      max <- max(rle$lengths[rle$values == value])
+  if(!is.null(columns)) df <- df[, columns]
+  
+  out <- c()
+  
+  for(i in 1:nrow(df)) {
+    
+    rle <- rle(df[i,])
+    
+    if(is.null(value)) {
+      
+      max <- max(rle$lengths)
+      
     } else {
-      max <- NA
+      
+      if(value %in% df[i,]) {
+        
+        max <- max(rle$lengths[rle$values == value])
+        
+      } else {
+        
+        max <- 0
+        
+      }
+      
     }
+    
+    out[i] <- max
+    
   }
   
-  return(max)
-}
-
-df$longstring <- NA_real_
-for(i in 1:nrow(df)) {
-  df$longstring[i] <- longstring(df[i,2:7])
-}
-
-df$longstring_1 <- NA_real_
-for(i in 1:nrow(df)) {
-  df$longstring_1[i] <- longstring(df[i,2:7], value = 1)
+  return(out)
+  
 }
 
 
 
 ####  Psychometric Synonyms  ####
-library(careless)
-df$psc <- careless::psychsyn(df, critval = .6)
+#See Psychometric Synonyms with Highly Correlated Data Demonstration.R for a demonstration of why this was not as useful in our analysis
+psychSyn <- function(df, columns = NULL) {
 
-
-
-####  Psychometric Synonyms - Bootstrapped  ####
-#It is not recommended that items be used more than once (Curran p. 11) - but we can try! To the best of my Google-ing this has not been done before.
-#Weigh by correlation between two items?
-
-
-
-####  Even-odd Consistency  ####
-#Cannot do without subscales
-
-
-
-####  Resampled Individual Reliability (Bootstrapped "Even-odd")  ####
-#Cannot do without subscales
+  require(careless) #see https://cran.r-project.org/web/packages/careless/careless.pdf
+  
+  if(!is.null(columns)) df <- df[, columns]
+  
+  out <- c()
+  
+  out <- careless::psychsyn(df, critval = .6)
+  
+  return(out)
+  
+}
 
 
 
 ####  IRT: Polytomous Guttman Errors  ####
-#See https://rdrr.io/cran/PerFit/man/Gpoly.html
-library(PerFit)
-dfPerFit <- df[-101,2:7] - 1
-PerFit::Gpoly(matrix = dfPerFit,
-              Ncat = 5)
-PerFit::Gnormed.poly(matrix = dfPerFit,
-                     Ncat = 5)
+polyGuttmanErrors <- function(df, nCategories, columns = NULL, norm = F) {
+  
+  require(PerFit) #see https://cran.r-project.org/web/packages/PerFit/PerFit.pdf
+  
+  if(!is.null(columns)) df <- df[, columns]
+  
+  #Modify df if needed so that the lowest response level is coded as 0 (required for PerFit functions)
+  if(min(df, na.rm = T) != 0) df <- df - min(df, na.rm = T)
+  
+  out <- c()
+  
+  if(norm == T) {
+    
+    out <- PerFit::Gnormed.poly(matrix = df, Ncat = nCategories)[["PFscores"]][[1]]
+    
+  } else {
+    
+    out <- PerFit::Gpoly(matrix = df, Ncat = nCategories)[["PFscores"]][[1]]
+    
+  }
+
+  return(out)
+  
+}
 
 
-####  IRT: Person Fit Statistic  ####
-#However, a tentative general conclusion is that simple group-based PFSs like Ht and U3 do not perform worse, 
-#and in some cases perform better, than most model-based PFSs across different types of datasets. 
-#See https://www.jstatsoft.org/article/view/v074i05/v74i05.pdf
-PerFit::U3poly(matrix = dfPerFit,
-               Ncat = 5,
-               NA.method = "Pairwise",
-               IRT.PModel = "GRM",
-               Ability.PModel = "EAP")
+
+
+####  IRT: U3 Person Fit Statistic  ####
+#See https://www.jstatsoft.org/article/view/v074i05/v74i05.pdf for rationale for choosing the U3 statistic for use with polytomous data
+u3 <- function(df, nCategories, columns = NULL) {
+  
+  require(PerFit) #see https://cran.r-project.org/web/packages/PerFit/PerFit.pdf
+  
+  if(!is.null(columns)) df <- df[, columns]
+  
+  #Modify df if needed so that the lowest response level is coded as 0 (required for PerFit functions)
+  if(min(df, na.rm = T) != 0) df <- df - min(df, na.rm = T)
+  
+  out <- c()
+  
+  out <- PerFit::U3poly(matrix = df, Ncat = nCategories)[["PFscores"]][[1]]
+  
+  return(out)
+  
+}
+
+
 
 ####  Univariate Outlier Analysis  ####
-#Case 102 is an outlier
-df <- df %>%
-  dplyr::mutate(score = rowMeans(df[,2:7], na.rm = T),
-                z = (score - mean(score)) / sd(score))
+zScore <- function(df, columns = NULL) {
+  
+  if(!is.null(columns)) df <- df[, columns]
+  
+  out <- c()
+  
+  rowMean <- rowMeans(df, na.rm = T)
+  
+  z <- (rowMean - mean(rowMean)) / sd(rowMean)
+  
+  return(z)
+  
+}
 
 
 
 ####  Mahalanobis Distance  ####
 #only works with complete cases
-df.complete$mahalanobis <- stats::mahalanobis(df.complete[,2:7],
-                                              colMeans(df.complete[,2:7]),
-                                              cov(df.complete[,2:7]))
-df.complete$mahalanobisSquared <- df.complete$mahalanobis^2
+mahalanobisDist <- function(df, columns = NULL) {
+  
+  if(!is.null(columns)) df <- df[, columns]
+  
+  #This procedure requires copmplete cases. Therefore we'll limit the dataset to complete cases, and return a vector which is NA when a case is not complete
+  completeCasesIndex <- which(complete.cases(df))
+  
+  df.complete <- df[completeCasesIndex,]
+  
+  out.complete <- stats::mahalanobis(df.complete, colMeans(df.complete), cov(df.complete))
+  
+  out <- rep(NA, nrow(df))
+  
+  out[completeCasesIndex] <- out.complete
+  
+  return(out)
+  
+}
 
 
 
 ####  Inter-Item Standard Deviation  ####
-df$interItemSD <- NA_real_
-for(i in 1:nrow(df)) {
-  df$interItemSD[i] <- sd(df[i,2:7])
+interItemSD <- function(df, columns = NULL) {
+  
+  if(!is.null(columns)) df <- df[, columns]
+  
+  out <- c()
+  
+  for(i in 1:nrow(df)) out[i] <- sd(df[i,])
+  
+  return(out)
+  
 }
 
 
 
 ####  Person-Total Correlation  ####
-df$personTotalCorr <- NA_real_
-for(i in 1:nrow(df)) {
-  responses <- as.numeric(df[i,2:7])
-  personItemCorrelations <- sapply(df[-i,2:7], mean, na.rm = T)
-  df$personTotalCorr[i] <- cor(responses, personItemCorrelations)
+personTotalCor <- function(df, columns = NULL) {
+  
+  if(!is.null(columns)) df <- df[, columns]
+  
+  out <- c()
+  
+  for(i in 1:nrow(df)) {
+    
+    responseSet <- as.numeric(df[i,])
+    personItemCorrelations <- sapply(df[-i,], mean, na.rm = T)
+    out[i] <- cor(responseSet, personItemCorrelations)
+    
+  }
+  
+  return(out)
+  
 }
