@@ -233,7 +233,20 @@ u3 <- function(df, nCategories, columns = NULL) {
   #Modify df if needed so that the lowest response level is coded as 0 (required for PerFit functions)
   if(min(df, na.rm = T) != 0) df <- df - min(df, na.rm = T)
   
-  out <- PerFit::U3poly(matrix = df, Ncat = nCategories)[["PFscores"]][[1]]
+  #This procedure requires copmplete cases. Therefore we'll limit the dataset to complete cases, and return a vector which is NA when a case is not complete
+  completeCasesIndex <- which(complete.cases(df))
+  
+  #Limit the dataset to complete cases
+  df.complete <- df[completeCasesIndex,]
+  
+  #Calculate the normed polytomous Guttman errors with those complete cases
+  out.complete <- PerFit::U3poly(matrix = df.complete, Ncat = nCategories)[["PFscores"]][[1]]
+  
+  #Initialize the ouput vector as NA with the full length of nrow(df) so that we can include the complete case (non-NA) values in their right places
+  out <- rep(NA, nrow(df))
+  
+  #Add normed error values back into this NA vector in their right places (so that cases with NA values will have an NA value here)
+  out[completeCasesIndex] <- out.complete
   
   return(out)
   
