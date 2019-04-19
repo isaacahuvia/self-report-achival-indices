@@ -301,15 +301,42 @@ mahalanobisDist <- function(df, columns = NULL) {
 
 
 ####  Inter-Item Standard Deviation  ####
-interItemSD <- function(df, columns = NULL) {
+interItemSD <- function(df, scaleLookup = NULL, columns = NULL) {
   
   #If the user specifies the columns to use (as a numeric vector), limit the analysis to those columns
   if(!is.null(columns)) df <- df[, columns]
   
-  #Initialize the ouput vector so that the loop can populate it
-  out <- c()
+  if(is.null(scaleLookup)) {
+    
+    #Initialize the ouput vector so that the loop can populate it
+    out <- c()
+    
+    for(i in 1:nrow(df)) out[i] <- sd(df[i,], na.rm = T) #This is simply the standard deviation of the response set, with NA values removed
+    
+  } else {
+    
+    #List unique scales
+    scales <- unique(scaleLookup[[1]])
+    
+    #Initialize a vector of standard deviations for each scale, to be averaged
+    SDs <- c()
+    
+    for(i in 1:nrow(df)) {
+      
+      for(k in 1:length(scales)) {
+        
+        values <- df[i, names(df) %in% scaleLookup[[2]][scaleLookup[[1]] %in% scales[k]]]
+        values <- as.numeric(values)
+        
+        SDs[k] <- sd(values, na.rm = T)
+        
+      }
+      
+      out[i] <- mean(SDs)
+      
+    }
   
-  for(i in 1:nrow(df)) out[i] <- sd(df[i,], na.rm = T) #This is simply the standard deviation of the response set, with NA values removed
+  }
   
   return(out)
   
