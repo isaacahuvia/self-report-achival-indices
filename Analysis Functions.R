@@ -5,6 +5,102 @@
 
 ## See [paper citation] for an explanation of these methods
 
+####  Resampled Individual Consistency  ####
+#like even-odd, but instead of arbitrarily using even and odd numbered responses, use a series of random splits
+#scaleLookup must be a data frame with two columns, the first being a unique identifier for scales and the second being a list of all variable names in each scale
+resampledConsistency <- function(df, scaleLookup, iterations = 100, columns = NULL) {
+  
+  #If the user specifies the columns to use (as a numeric vector), limit the analysis to those columns
+  if(!is.null(columns)) df <- df[, columns]
+  
+  #List unique scales
+  scales <- unique(scaleLookup[[1]])
+  
+  #Initialize the ouput vector so that the loop can populate it
+  out <- c()
+  
+  for(i in 1:nrow(df)) {
+    
+    progress <- round(seq(nrow(df) / 20, nrow(df), length.out = 20))
+    if(i %in% progress) print(paste0(round(100 * i / nrow(df)), "% complete"))
+    
+    cors <- c()
+    
+    for(n in 1:iterations) {
+
+      a <- c()
+      b <- c()
+      
+      for(k in 1:length(scales)) {
+        
+        values <- as.numeric(df[i, names(df) %in% scaleLookup[[2]][scaleLookup[[1]] %in% scales[k]]])
+        index <- 1:length(values)
+        
+        index.a <- sample(index, floor(length(index)) / 2, replace = F)
+        index.b <- index[!index %in% index.a]
+        
+        a[k] <- mean(values[index.a], na.rm = T)
+        b[k] <- mean(values[index.b], na.rm = T)
+        
+      }
+      
+      cors[n] <- cor(a, b)
+      
+    }
+    
+    out[i] <- mean(cors)
+    
+  }
+  
+  return(out)
+  
+}
+# hist(resampledConsistency(df, scaleLookup = scaleLookup, iterations = 1), breaks = seq(-1, 1, by = .05))
+# hist(resampledConsistency(df, scaleLookup = scaleLookup, iterations = 5), breaks = seq(-1, 1, by = .05))
+# hist(resampledConsistency(df, scaleLookup = scaleLookup, iterations = 10), breaks = seq(-1, 1, by = .05))
+# hist(resampledConsistency(df, scaleLookup = scaleLookup, iterations = 15), breaks = seq(-1, 1, by = .05))
+# hist(resampledConsistency(df, scaleLookup = scaleLookup, iterations = 25), breaks = seq(-1, 1, by = .05))
+# hist(resampledConsistency(df, scaleLookup = scaleLookup, iterations = 50), breaks = seq(-1, 1, by = .05))
+# hist(resampledConsistency(df, scaleLookup = scaleLookup, iterations = 100), breaks = seq(-1, 1, by = .05))
+
+
+####  Even-Odd Consistency  ####
+#scaleLookup must be a data frame with two columns, the first being a unique identifier for scales and the second being a list of all variable names in each scale
+evenOdd <- function(df, scaleLookup, columns = NULL) {
+  
+  #If the user specifies the columns to use (as a numeric vector), limit the analysis to those columns
+  if(!is.null(columns)) df <- df[, columns]
+  
+  #List unique scales
+  scales <- unique(scaleLookup[[1]])
+  
+  #Initialize the ouput vector so that the loop can populate it
+  out <- c()
+  
+  for(i in 1:nrow(df)) {
+    
+    evens <- c()
+    odds <- c()
+    
+    for(k in 1:length(scales)) {
+      
+      values <- df[i, names(df) %in% scaleLookup[[2]][scaleLookup[[1]] %in% scales[k]]]
+      values <- as.numeric(values)
+      
+      evens[k] <- mean(values[seq(2, length(values), by = 2)], na.rm = T)
+      odds[k] <- mean(values[seq(1, length(values), by = 2)], na.rm = T)
+      
+    }
+    
+    out[i] <- cor(evens, odds)
+    
+  }
+  
+  return(out)
+  
+}
+
+
 ####  Omitted Items  ####
 omittedItems <- function(df, columns = NULL) {
   
@@ -75,14 +171,14 @@ longstring <- function(df, columns = NULL, value = NULL) {
 
 ####  Psychometric Synonyms  ####
 #See Psychometric Synonyms with Highly Correlated Data Demonstration.R for a demonstration of why this was not as useful in our analysis
-psychSyn <- function(df, columns = NULL) {
+psychSyn <- function(df, critval = .6, columns = NULL) {
 
   require(careless) #see https://cran.r-project.org/web/packages/careless/careless.pdf
   
   #If the user specifies the columns to use (as a numeric vector), limit the analysis to those columns
   if(!is.null(columns)) df <- df[, columns]
   
-  out <- careless::psychsyn(df, critval = .6)
+  out <- careless::psychsyn(df, critval = critval)
   
   return(out)
   
@@ -103,7 +199,20 @@ polyGuttmanErrors <- function(df, nCategories, columns = NULL, norm = F) {
   
   if(norm == T) {
     
-    out <- PerFit::Gnormed.poly(matrix = df, Ncat = nCategories)[["PFscores"]][[1]]
+    #This procedure requires copmplete cases. Therefore we'll limit the dataset to complete cases, and return a vector which is NA when a case is not complete
+    completeCasesIndex <- which(complete.cases(df))
+    
+    #Limit the dataset to complete cases
+    df.complete <- df[completeCasesIndex,]
+    
+    #Calculate the normed polytomous Guttman errors with those complete cases
+    out.complete <- PerFit::Gnormed.poly(matrix = df.complete, Ncat = nCategories)[["PFscores"]][[1]]
+    
+    #Initialize the ouput vector as NA with the full length of nrow(df) so that we can include the complete case (non-NA) values in their right places
+    out <- rep(NA, nrow(df))
+    
+    #Add normed error values back into this NA vector in their right places (so that cases with NA values will have an NA value here)
+    out[completeCasesIndex] <- out.complete
     
   } else {
     
@@ -213,8 +322,8 @@ personTotalCor <- function(df, columns = NULL) {
   for(i in 1:nrow(df)) {
     
     responseSet <- as.numeric(df[i,]) #Take the response set...
-    personItemCorrelations <- sapply(df[-i,], mean, na.rm = T) #...and the mean set of all other response sets...
-    out[i] <- cor(responseSet, personItemCorrelations) #...and output their correlation for each row (response set)
+    meanResponseSet <- sapply(df[-i,], mean, na.rm = T) #...and the mean set of all other response sets...
+    out[i] <- cor(responseSet, meanResponseSet) #...and output their correlation for each row (response set)
     
   }
   
