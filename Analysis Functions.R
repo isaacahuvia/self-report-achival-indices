@@ -370,7 +370,7 @@ personTotalCor <- function(df, columns = NULL) {
 ####  Reversed Question Correlation  ####
 #If the reversed items you provide this function are already coded to be in the same direction as other items, then a negative correlation in the output indicates careless responding
 #If the reversed items you provide this function are still reverse-coded relative to the other items, then a positive correlation in the output indicates careless responding 
-reversedItemCorrelation <- function(df, scaleLookup, reversedItems) {
+reversedItemCorrelation <- function(df, scaleLookup, reversedItems, columns = NULL) {
   
   #If the user specifies the columns to use (as a numeric vector), limit the analysis to those columns
   if(!is.null(columns)) df <- df[, columns]
