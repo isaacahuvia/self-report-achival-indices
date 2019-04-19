@@ -245,7 +245,7 @@ u3 <- function(df, nCategories, columns = NULL) {
   #Initialize the ouput vector as NA with the full length of nrow(df) so that we can include the complete case (non-NA) values in their right places
   out <- rep(NA, nrow(df))
   
-  #Add normed error values back into this NA vector in their right places (so that cases with NA values will have an NA value here)
+  #Add U3poly values back into this NA vector in their right places (so that cases with NA values will have an NA value here)
   out[completeCasesIndex] <- out.complete
   
   return(out)
