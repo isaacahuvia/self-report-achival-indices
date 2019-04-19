@@ -364,3 +364,50 @@ personTotalCor <- function(df, columns = NULL) {
   return(out)
   
 }
+
+
+
+####  Reversed Question Correlation  ####
+#If the reversed items you provide this function are already coded to be in the same direction as other items, then a negative correlation in the output indicates careless responding
+#If the reversed items you provide this function are still reverse-coded relative to the other items, then a positive correlation in the output indicates careless responding 
+reversedItemCorrelation <- function(df, scaleLookup, reversedItems) {
+  
+  #If the user specifies the columns to use (as a numeric vector), limit the analysis to those columns
+  if(!is.null(columns)) df <- df[, columns]
+  
+  #Initialize the ouput vector so that the loop can populate it
+  out <- c()
+  
+  #Limit to only scales with reversed items
+  scaleLookup <- scaleLookup[scaleLookup[[1]] %in% (scaleLookup[[1]][scaleLookup[[2]] %in% reversedItems]),]
+  
+  #List unique scales
+  scales <- unique(scaleLookup[[1]])
+  
+  for(i in 1:nrow(df)) {
+    
+    normal <- c()
+    reversed <- c()
+    
+    for(k in 1:length(scales)) {
+      
+      scale
+      
+      scale.normal <- df[i, names(df) %in% scaleLookup[scaleLookup[[1]] == scales[k],][[2]] & !names(df) %in% reversedItems]
+      scale.reversed <- df[i, names(df) %in% scaleLookup[scaleLookup[[1]] == scales[k],][[2]] & names(df) %in% reversedItems]
+      
+      scale.normal <- as.numeric(scale.normal)
+      scale.reversed <- as.numeric(scale.reversed)
+      
+      normal[k] <- mean(scale.normal, na.rm = T)
+      reversed[k] <- mean(scale.reversed, na.rm = T)
+      
+    }
+    
+    out[i] <- cor(normal, reversed, use = "pairwise.complete.obs")
+    
+  }
+  
+  return(out)
+  
+}
