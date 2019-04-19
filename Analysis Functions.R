@@ -55,13 +55,7 @@ resampledConsistency <- function(df, scaleLookup, iterations = 100, columns = NU
   return(out)
   
 }
-# hist(resampledConsistency(df, scaleLookup = scaleLookup, iterations = 1), breaks = seq(-1, 1, by = .05))
-# hist(resampledConsistency(df, scaleLookup = scaleLookup, iterations = 5), breaks = seq(-1, 1, by = .05))
-# hist(resampledConsistency(df, scaleLookup = scaleLookup, iterations = 10), breaks = seq(-1, 1, by = .05))
-# hist(resampledConsistency(df, scaleLookup = scaleLookup, iterations = 15), breaks = seq(-1, 1, by = .05))
-# hist(resampledConsistency(df, scaleLookup = scaleLookup, iterations = 25), breaks = seq(-1, 1, by = .05))
-# hist(resampledConsistency(df, scaleLookup = scaleLookup, iterations = 50), breaks = seq(-1, 1, by = .05))
-# hist(resampledConsistency(df, scaleLookup = scaleLookup, iterations = 100), breaks = seq(-1, 1, by = .05))
+
 
 
 ####  Even-Odd Consistency  ####
@@ -99,6 +93,7 @@ evenOdd <- function(df, scaleLookup, columns = NULL) {
   return(out)
   
 }
+
 
 
 ####  Omitted Items  ####
@@ -223,7 +218,6 @@ polyGuttmanErrors <- function(df, nCategories, columns = NULL, norm = F) {
   return(out)
   
 }
-
 
 
 
