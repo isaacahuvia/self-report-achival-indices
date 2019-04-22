@@ -270,7 +270,7 @@ zScore <- function(df, columns = NULL) {
 
 
 
-####  Mahalanobis Distance  ####
+####  Squared Mahalanobis Distance  ####
 #only works with complete cases
 mahalanobisDist <- function(df, columns = NULL) {
   
@@ -357,7 +357,7 @@ personTotalCor <- function(df, columns = NULL) {
     
     responseSet <- as.numeric(df[i,]) #Take the response set...
     meanResponseSet <- sapply(df[-i,], mean, na.rm = T) #...and the mean set of all other response sets...
-    out[i] <- cor(responseSet, meanResponseSet) #...and output their correlation for each row (response set)
+    out[i] <- cor(responseSet, meanResponseSet, use = "pairwise.complete.obs") #...and output their correlation for each row (response set)
     
   }
   
@@ -367,10 +367,10 @@ personTotalCor <- function(df, columns = NULL) {
 
 
 
-####  Reversed Question Correlation  ####
-#If the reversed items you provide this function are already coded to be in the same direction as other items, then a negative correlation in the output indicates careless responding
-#If the reversed items you provide this function are still reverse-coded relative to the other items, then a positive correlation in the output indicates careless responding 
-reversedItemCorrelation <- function(df, scaleLookup, reversedItems, columns = NULL) {
+####  Reversed Question Difference  ####
+#If the reversed items you provide this function are already coded to be in the same direction as other items, then a larger difference between means indicates careless responding
+#If the reversed items you provide this function are still reverse-coded relative to the other items, then small (near-zero) difference between means indicates careless responding 
+reversedItemDifference <- function(df, scaleLookup, reversedItems, columns = NULL) {
   
   #If the user specifies the columns to use (as a numeric vector), limit the analysis to those columns
   if(!is.null(columns)) df <- df[, columns]
@@ -386,8 +386,7 @@ reversedItemCorrelation <- function(df, scaleLookup, reversedItems, columns = NU
   
   for(i in 1:nrow(df)) {
     
-    normal <- c()
-    reversed <- c()
+    diff <- c()
     
     for(k in 1:length(scales)) {
       
@@ -399,12 +398,14 @@ reversedItemCorrelation <- function(df, scaleLookup, reversedItems, columns = NU
       scale.normal <- as.numeric(scale.normal)
       scale.reversed <- as.numeric(scale.reversed)
       
-      normal[k] <- mean(scale.normal, na.rm = T)
-      reversed[k] <- mean(scale.reversed, na.rm = T)
+      normal <- mean(scale.normal, na.rm = T)
+      reversed <- mean(scale.reversed, na.rm = T)
+      
+      diff[k] <- abs(normal - reversed)
       
     }
     
-    out[i] <- cor(normal, reversed, use = "pairwise.complete.obs")
+    out[i] <- mean(diff)
     
   }
   

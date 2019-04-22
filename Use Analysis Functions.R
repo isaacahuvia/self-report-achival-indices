@@ -45,7 +45,6 @@ for(i in sort(unique(as.vector(as.matrix(df[,1:50]))))) {
   out[[paste0("longstring_", i)]] <- longstring(df, value = i)
 }
 out$mahalanobisDist <- mahalanobisDist(df)
-out$mahalanobisDistSquared <- out$mahalanobisDist^2
 out$omittedItems <- omittedItems(df)
 out$personTotalCor <- personTotalCor(df)
 out$polyGuttmanErrors <- polyGuttmanErrors(df, nCategories = 5)
@@ -65,7 +64,6 @@ for(i in sort(unique(as.vector(as.matrix(df[,1:50]))))) {
   df[[paste0("longstring_", i)]] <- longstring(df, value = i, columns = 1:50)
 }
 df$mahalanobisDist <- mahalanobisDist(df, columns = 1:50)
-df$mahalanobisDistSquared <- df$mahalanobisDist^2
 df$omittedItems <- omittedItems(df, columns = 1:50)
 df$personTotalCor <- personTotalCor(df, columns = 1:50)
 df$polyGuttmanErrors <- polyGuttmanErrors(df, nCategories = 5, columns = 1:50)
