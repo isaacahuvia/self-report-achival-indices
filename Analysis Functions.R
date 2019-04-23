@@ -182,7 +182,7 @@ psychSyn <- function(df, critval = .6, columns = NULL) {
 
 
 ####  IRT: Polytomous Guttman Errors  ####
-polyGuttmanErrors <- function(df, nCategories, columns = NULL, norm = F) {
+polyGuttmanErrors <- function(df, nCategories, norm = F, columns = NULL, scaleLookup = NULL) {
   
   require(PerFit) #see https://cran.r-project.org/web/packages/PerFit/PerFit.pdf
   
@@ -192,29 +192,58 @@ polyGuttmanErrors <- function(df, nCategories, columns = NULL, norm = F) {
   #Modify df if needed so that the lowest response level is coded as 0 (required for PerFit functions)
   if(min(df, na.rm = T) != 0) df <- df - min(df, na.rm = T)
   
-  if(norm == T) {
+  if(is.null(scaleLookup)) {
     
-    #This procedure requires copmplete cases. Therefore we'll limit the dataset to complete cases, and return a vector which is NA when a case is not complete
-    completeCasesIndex <- which(complete.cases(df))
-    
-    #Limit the dataset to complete cases
-    df.complete <- df[completeCasesIndex,]
-    
-    #Calculate the normed polytomous Guttman errors with those complete cases
-    out.complete <- PerFit::Gnormed.poly(matrix = df.complete, Ncat = nCategories)[["PFscores"]][[1]]
-    
-    #Initialize the ouput vector as NA with the full length of nrow(df) so that we can include the complete case (non-NA) values in their right places
-    out <- rep(NA, nrow(df))
-    
-    #Add normed error values back into this NA vector in their right places (so that cases with NA values will have an NA value here)
-    out[completeCasesIndex] <- out.complete
+    if(norm == T) {
+      
+      #This procedure requires copmplete cases. Therefore we'll limit the dataset to complete cases, and return a vector which is NA when a case is not complete
+      completeCasesIndex <- which(complete.cases(df))
+      
+      #Limit the dataset to complete cases
+      df.complete <- df[completeCasesIndex,]
+      
+      #Calculate the normed polytomous Guttman errors with those complete cases
+      out.complete <- PerFit::Gnormed.poly(matrix = df.complete, Ncat = nCategories)[["PFscores"]][[1]]
+      
+      #Initialize the ouput vector as NA with the full length of nrow(df) so that we can include the complete case (non-NA) values in their right places
+      out <- rep(NA, nrow(df))
+      
+      #Add normed error values back into this NA vector in their right places (so that cases with NA values will have an NA value here)
+      out[completeCasesIndex] <- out.complete
+      
+    } else {
+      
+      out <- PerFit::Gpoly(matrix = df, Ncat = nCategories)[["PFscores"]][[1]]
+      
+    }
     
   } else {
     
-    out <- PerFit::Gpoly(matrix = df, Ncat = nCategories)[["PFscores"]][[1]]
-    
-  }
+    #List unique scales
+    scales <- unique(scaleLookup[[1]])
 
+    #Initialize a vector of Guttman errors for each scale, to be summed
+    errors <- matrix(ncol = length(scales), nrow = nrow(df))
+      
+    for(k in 1:length(scales)) {
+      
+      if(norm == T) {
+          
+        stop("This function cannot calculate normed Guttman errors by subscale")
+          
+      } else {
+          
+        errors[,k] <- PerFit::Gpoly(matrix = df[,names(df) %in% scaleLookup[[2]][scaleLookup[[1]] %in% scales[k]]],
+                                   Ncat = nCategories)[["PFscores"]][[1]]
+
+      }
+
+    }
+      
+    out <- as.numeric(rowSums(errors, na.rm = T))
+      
+  }
+    
   return(out)
   
 }
