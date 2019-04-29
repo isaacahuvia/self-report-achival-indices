@@ -1,7 +1,7 @@
-####################################
-##  Self Report Archival Indices  ##
-##     Use Analysis Functions     ##
-####################################
+#################################################################
+##     Self Report Archival Indices: Use Analysis Functions    ##
+##  https://github.com/isaacahuvia/self-report-achival-indices ##
+#################################################################
 
 library(careless)
 library(PerFit)
@@ -31,16 +31,14 @@ scaleLookup <- data.frame(
 #Establish reversed question lookup - these aren't actually reverse-coded, but for the sake of running the function we'll pretend like they are
 reversedItems <- c("scaleA1", "scaleA2", "scaleB1", "scaleB5", "scaleF3")
 
-
-
-####  Use Functions  ####
+#Use functions
 df$evenOdd <- evenOdd(df, scaleLookup = scaleLookup, columns = 1:50)
 df$interItemSD <- interItemSD(df, scaleLookup = scaleLookup, columns = 1:50)
 df$longstring <- longstring(df, columns = 1:50)
 for(i in sort(unique(as.vector(as.matrix(df[,1:50]))))) {
   df[[paste0("longstring_", i)]] <- longstring(df, value = i, columns = 1:50)
 }
-df$mahalanobisDistSq <- mahalanobisDist(df, columns = 1:50)
+df$mahalanobisDist <- mahalanobisDist(df, columns = 1:50)
 df$omittedItems <- omittedItems(df, columns = 1:50)
 df$personTotalCor <- personTotalCor(df, columns = 1:50)
 df$polyGuttmanErrors <- polyGuttmanErrors(df, nCategories = 5, columns = 1:50, scaleLookup = scaleLookup)

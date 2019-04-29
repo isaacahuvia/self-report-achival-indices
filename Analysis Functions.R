@@ -1,9 +1,10 @@
-####################################
-##  Self Report Archival Indices  ##
-##       Analysis Functions       ##
-####################################
+#################################################################
+##     Self Report Archival Indices: Set Analysis Functions    ##
+##  https://github.com/isaacahuvia/self-report-achival-indices ##
+#################################################################
 
 #Functions used to produce statistics in Bevans et al. 2019, "Assessing Child-Report Data Quality." See paper for an explanation of these methods. 
+#See https://github.com/isaacahuvia/self-report-achival-indices/blob/master/Use%20Analysis%20Functions.R for examples
 
 ####  Even-Odd Consistency  ####
 #scaleLookup must be a data frame with two columns, the first being a unique identifier for scales and the second being a list of all variable names in each scale
@@ -20,19 +21,23 @@ evenOdd <- function(df, scaleLookup, columns = NULL) {
   
   for(i in 1:nrow(df)) {
     
+    #For each row, establish vectors for the means of even and odd responses across scales
     evens <- c()
     odds <- c()
     
     for(k in 1:length(scales)) {
       
+      #For each scale, pull its values...
       values <- df[i, names(df) %in% scaleLookup[[2]][scaleLookup[[1]] %in% scales[k]]]
       values <- as.numeric(values)
       
+      #And separate the even and odd values, adding their means to the vectors evens and odds
       evens[k] <- mean(values[seq(2, length(values), by = 2)], na.rm = T)
       odds[k] <- mean(values[seq(1, length(values), by = 2)], na.rm = T)
       
     }
     
+    #The output is the correlation between these two vectors
     out[i] <- cor(evens, odds)
     
   }
@@ -44,6 +49,7 @@ evenOdd <- function(df, scaleLookup, columns = NULL) {
 
 
 ####  Inter-Item Standard Deviation  ####
+#scaleLookup must be a data frame with two columns, the first being a unique identifier for scales and the second being a list of all variable names in each scale
 interItemSD <- function(df, scaleLookup = NULL, columns = NULL) {
   
   #If the user specifies the columns to use (as a numeric vector), limit the analysis to those columns
@@ -54,7 +60,7 @@ interItemSD <- function(df, scaleLookup = NULL, columns = NULL) {
   
   if(is.null(scaleLookup)) {
     
-    for(i in 1:nrow(df)) out[i] <- sd(df[i,], na.rm = T) #This is simply the standard deviation of the response set, with NA values removed
+    for(i in 1:nrow(df)) out[i] <- sd(df[i,], na.rm = T) #Where there are no scales, the output is simply the standard deviation of the response set, with NA values removed
     
   } else {
     
@@ -68,13 +74,16 @@ interItemSD <- function(df, scaleLookup = NULL, columns = NULL) {
       
       for(k in 1:length(scales)) {
         
+        #For each scale, pull its values...
         values <- df[i, names(df) %in% scaleLookup[[2]][scaleLookup[[1]] %in% scales[k]]]
         values <- as.numeric(values)
         
+        #...and take their standard deviation, ignoring NA values
         SDs[k] <- sd(values, na.rm = T)
         
       }
       
+      #The output is the mean of the standard deviations by scale
       out[i] <- as.numeric(mean(SDs, na.rm = T))
       
     }
@@ -99,6 +108,7 @@ longstring <- function(df, columns = NULL, value = NULL) {
   
   for(i in 1:nrow(df)) {
     
+    #Count the length and type of response strings of the same value
     rle <- rle(df[i,])
     
     if(is.null(value)) {
@@ -209,6 +219,7 @@ personTotalCor <- function(df, columns = NULL) {
 
 
 ####  IRT: Polytomous Guttman Errors  ####
+#scaleLookup must be a data frame with two columns, the first being a unique identifier for scales and the second being a list of all variable names in each scale
 polyGuttmanErrors <- function(df, nCategories, norm = F, columns = NULL, scaleLookup = NULL) {
   
   require(PerFit) #see https://cran.r-project.org/web/packages/PerFit/PerFit.pdf
@@ -223,7 +234,7 @@ polyGuttmanErrors <- function(df, nCategories, norm = F, columns = NULL, scaleLo
     
     if(norm == T) {
       
-      #This procedure requires copmplete cases. Therefore we'll limit the dataset to complete cases, and return a vector which is NA when a case is not complete
+      #This procedure requires complete cases. Therefore we'll limit the dataset to complete cases, and return a vector which is NA when a case is not complete
       completeCasesIndex <- which(complete.cases(df))
       
       #Limit the dataset to complete cases
@@ -240,6 +251,7 @@ polyGuttmanErrors <- function(df, nCategories, norm = F, columns = NULL, scaleLo
       
     } else {
       
+      #If values are not to be normed, simply return the unnormed values. This procedure does not require complete cases. 
       out <- PerFit::Gpoly(matrix = df, Ncat = nCategories)[["PFscores"]][[1]]
       
     }
@@ -256,10 +268,11 @@ polyGuttmanErrors <- function(df, nCategories, norm = F, columns = NULL, scaleLo
       
       if(norm == T) {
         
-        stop("This function cannot calculate normed Guttman errors by subscale")
+        stop("This function cannot calculate normed Guttman errors by scale")
         
       } else {
         
+        #If scales are supplied, calculate Guttman errors by scale...
         errors[,k] <- PerFit::Gpoly(matrix = df[,names(df) %in% scaleLookup[[2]][scaleLookup[[1]] %in% scales[k]]],
                                     Ncat = nCategories)[["PFscores"]][[1]]
         
@@ -267,6 +280,7 @@ polyGuttmanErrors <- function(df, nCategories, norm = F, columns = NULL, scaleLo
       
     }
     
+    #... and output the sum of Guttman errors by scale
     out <- as.numeric(rowSums(errors, na.rm = T))
     
   }
@@ -295,7 +309,7 @@ psychSyn <- function(df, critval = .6, columns = NULL) {
 
 
 ####  Resampled Individual Consistency  ####
-#like even-odd, but instead of arbitrarily using even and odd numbered responses, use a series of random splits
+#like even-odd consistency, but instead of arbitrarily using even and odd numbered responses, use a series of random splits
 #scaleLookup must be a data frame with two columns, the first being a unique identifier for scales and the second being a list of all variable names in each scale
 resampledConsistency <- function(df, scaleLookup, iterations = 100, columns = NULL) {
   
@@ -310,33 +324,41 @@ resampledConsistency <- function(df, scaleLookup, iterations = 100, columns = NU
   
   for(i in 1:nrow(df)) {
     
+    #Since this process can take a while, this code tracks its progress and outputs a % complete indicator
     progress <- round(seq(nrow(df) / 20, nrow(df), length.out = 20))
     if(i %in% progress) print(paste0(round(100 * i / nrow(df)), "% complete"))
     
+    #Establish a vector of correlations, to be populated during resampling
     cors <- c()
     
     for(n in 1:iterations) {
 
+      #For each iteration, establish vectors a and b, which will be the means of random halves of each scale
       a <- c()
       b <- c()
       
       for(k in 1:length(scales)) {
         
+        #For each scale, take its values and count its length
         values <- as.numeric(df[i, names(df) %in% scaleLookup[[2]][scaleLookup[[1]] %in% scales[k]]])
         index <- 1:length(values)
         
+        #Randomly determine which vector will have which values
         index.a <- sample(index, floor(length(index)) / 2, replace = F)
         index.b <- index[!index %in% index.a]
         
+        #Take the mean of each randomly sampled vector
         a[k] <- mean(values[index.a], na.rm = T)
         b[k] <- mean(values[index.b], na.rm = T)
         
       }
       
+      #Correlate the means of random halves of each scale
       cors[n] <- cor(a, b)
       
     }
     
+    #Output the mean of these correlations
     out[i] <- mean(cors)
     
   }
@@ -434,9 +456,11 @@ zScore <- function(df, columns = NULL) {
   #If the user specifies the columns to use (as a numeric vector), limit the analysis to those columns
   if(!is.null(columns)) df <- df[, columns]
   
+  #Calculate the mean value by row
   rowMean <- rowMeans(df, na.rm = T)
   
-  out <- (rowMean - mean(rowMean)) / sd(rowMean) #This is a z-score
+  #Output the z-score of that value compared to all other values
+  out <- (rowMean - mean(rowMean)) / sd(rowMean)
   
   return(out)
   
