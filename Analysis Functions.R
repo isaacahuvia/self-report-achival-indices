@@ -460,7 +460,7 @@ zScore <- function(df, columns = NULL) {
   rowMean <- rowMeans(df, na.rm = T)
   
   #Output the z-score of that value compared to all other values
-  out <- (rowMean - mean(rowMean)) / sd(rowMean)
+  out <- (rowMean - mean(rowMean, na.rm = T)) / sd(rowMean, na.rm = T)
   
   return(out)
   
